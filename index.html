@@ -1,0 +1,1534 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
+  <title>Alcool Tracker</title>
+
+  <!-- iOS/PWA -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Alcool Tracker">
+  <meta name="theme-color" content="#0f172a"/>
+
+  <!-- Apple touch icon (data URI PNG 180x180) -->
+  <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAABzq4c7AAAACXBIWXMAAAsSAAALEgHS3X78AAABYUlEQVR4nO3RMQEAIAzAMOQ/6b0mY8Uo5Nw1w0Q0w2d8FQAAAAAAAAAAAAAAAAAAAB6m0cWQY7s1r4sZfVn8L3g9rEo8m2wq9d0z8bB2yqf0yZx3gJg8Fq7Jg7wqg7z3w8m0Zr7b2iGxv0X8eYF6k7l0g8f9w2m0Vb7b0jGxv0X8eYF6k7l0g8f9w2m0Vb7b0jGxv0X8eYF6k7l0g8f9w2m0Vb7b0jGyv5v0f/5wAAAAAAAAAAAAAAAAAAAAAAAPw9B2h1b+1yqgAAAABJRU5ErkJggg==" />
+
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111827; --text:#e5e7eb; --muted:#9ca3af;
+      --pri:#22c55e; --pri-press:#16a34a; --danger:#ef4444; --chip:#1f2937; --bar:#3b82f6; --radius:14px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b;
+        --pri:#16a34a; --pri-press:#15803d; --danger:#dc2626; --chip:#e2e8f0; --bar:#2563eb;
+      }
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      /* iOS safe area support */
+      padding-bottom: env(safe-area-inset-bottom);
+      /* Smooth scrolling on iOS */
+      -webkit-overflow-scrolling: touch;
+      /* Prevent zoom on input focus */
+      -webkit-text-size-adjust: 100%;
+    }
+    .app-header{
+      position:sticky;
+      top:0;
+      backdrop-filter:saturate(1.2) blur(8px);
+      background:color-mix(in oklab, var(--bg) 80%, transparent);
+      padding:10px 16px;
+      border-bottom:1px solid color-mix(in oklab, var(--text) 10%, transparent);
+      /* iOS safe area support for header */
+      padding-top: max(10px, env(safe-area-inset-top));
+    }
+    h1{margin:0;font-size:20px;font-weight:700}
+    .tabs{display:flex;gap:8px;margin-top:10px}
+    .tab{
+      flex:1;
+      padding:12px;
+      min-height:44px;
+      border-radius:999px;
+      background:var(--chip);
+      color:var(--text);
+      border:1px solid transparent;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      /* Better touch response */
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+      /* Visual feedback */
+      transition: all 0.2s ease;
+      transform: scale(1);
+    }
+    .tab:active {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    .tab.active{outline:2px solid color-mix(in oklab, var(--pri) 40%, transparent);background:color-mix(in oklab, var(--chip) 70%, var(--pri) 30%)}
+    main{
+      padding:16px;
+      /* Better spacing for iPhone */
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    .card{background:var(--card);border:1px solid color-mix(in oklab, var(--text) 10%, transparent);border-radius:var(--radius);padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.15)}
+    .section-title{margin:8px 0 12px 0;font-size:18px}
+    .group{margin:18px 0}
+    .group-title{font-weight:700;margin-bottom:10px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .chip, .primary, .ghost, .danger{
+      padding:14px 16px;
+      min-height:44px;
+      border-radius:12px;
+      border:1px solid transparent;
+      background:var(--chip);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      /* Better touch response */
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+      font-size: 16px; /* Prevent zoom on iOS */
+      /* Visual feedback */
+      transition: all 0.2s ease;
+      transform: scale(1);
+    }
+    .chip:active, .ghost:active, .danger:active {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    .primary{background:var(--pri);color:#fff;font-weight:700}
+    .primary:active{background:var(--pri-press);transform: scale(0.95)}
+    .ghost{background:transparent;border:1px solid color-mix(in oklab, var(--text) 18%, transparent)}
+    .danger{border-color:color-mix(in oklab, var(--danger) 50%, transparent);color:var(--danger)}
+    .wide{width:100%}
+    .date-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .date-label{font-weight:700}
+    .seg-row{display:flex;gap:8px;margin-bottom:8px}
+    .seg{position:relative;flex:1}
+    .seg input{display:none}
+    .seg label{
+      display:block;
+      text-align:center;
+      padding:12px;
+      min-height:44px;
+      border-radius:12px;
+      border:1px solid color-mix(in oklab, var(--text) 18%, transparent);
+      background:var(--chip);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      /* Better touch response */
+      -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
+      font-size: 16px; /* Prevent zoom on iOS */
+      /* Visual feedback */
+      transition: all 0.2s ease;
+      transform: scale(1);
+    }
+    .seg label:active {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    .seg input:checked + label{outline:2px solid color-mix(in oklab, var(--pri) 40%, transparent);background:color-mix(in oklab, var(--chip) 70%, var(--pri) 30%)}
+    .form-row{
+      display:grid;
+      grid-template-columns:1.2fr .6fr .7fr .7fr auto;
+      gap:8px;
+      align-items:end;
+      /* Better mobile layout */
+      @media (max-width: 480px) {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+    input{
+      padding:14px 12px;
+      min-height:44px;
+      border-radius:12px;
+      border:1px solid color-mix(in oklab, var(--text) 18%, transparent);
+      background:transparent;
+      color:var(--text);
+      font-size: 16px; /* Prevent zoom on iOS */
+      -webkit-appearance: none; /* Remove iOS styling */
+      -webkit-tap-highlight-color: transparent;
+    }
+    input:focus {
+      outline: 2px solid var(--pri);
+      border-color: var(--pri);
+    }
+    .hint{color:var(--muted)}
+    .log-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+    .log-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:12px;background:var(--chip);border:1px solid color-mix(in oklab, var(--text) 12%, transparent)}
+    .item-meta{font-size:12px;color:var(--muted)}
+    .row-end{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+    .totals{display:flex;gap:16px;justify-content:flex-start;flex-wrap:wrap;margin-top:10px}
+    .app-footer{
+      padding:12px 16px;
+      color:var(--muted);
+      text-align:center;
+      /* Better spacing for iPhone */
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    .stats{display:flex;flex-direction:column;gap:10px}
+    .stat-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center}
+    .stat-name{font-weight:600}
+    .bar{height:10px;border-radius:999px;background:color-mix(in oklab, var(--bar) 25%, transparent);overflow:hidden}
+    .bar > span{display:block;height:100%;background:var(--bar);width:0}
+    .stat-vals{font-size:12px;color:var(--muted)}
+    .file-btn{display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+    .preset-editor{display:flex;flex-direction:column;gap:8px}
+    .preset-row{display:grid;grid-template-columns:1fr .7fr .7fr;gap:8px}
+    .preset-row input{width:100%}
+    canvas{width:100%;height:200px;display:block;touch-action: pan-y;}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+@media (max-width:720px){.summary-grid{grid-template-columns:1fr}}
+.summary-card{background:var(--card);border:1px solid color-mix(in oklab, var(--text) 10%, transparent);border-radius:16px;padding:14px 16px}
+.summary-title{margin:0 0 8px 0;font-weight:700}
+.summary-rows{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.summary-box{background:var(--chip);border:1px solid color-mix(in oklab, var(--text) 12%, transparent);border-radius:14px;padding:12px 10px;text-align:center}
+.summary-big{font-size:24px;font-weight:800;color:var(--pri)}
+.summary-label{font-size:12px;color:var(--muted)}
+    
+    /* Additional iPhone optimizations */
+    button, .chip, .primary, .ghost, .danger {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    /* Improve scrolling performance */
+    .view {
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Better responsive grid for mobile */
+    @media (max-width: 480px) {
+      .grid-2 {
+        gap: 12px;
+      }
+      .form-row {
+        grid-template-columns: 1fr !important;
+      }
+      .stat-row {
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+      }
+      .totals {
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+    
+    /* Keyboard open state for iOS */
+    body.keyboard-open {
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    body.keyboard-open main {
+      padding-bottom: 0;
+    }
+    
+    /* Enhanced Statistics Styles */
+    .quick-stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    
+    .stats-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .stats-column h4 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+    }
+    
+    .stat-card {
+      background: color-mix(in oklab, var(--pri) 10%, var(--card));
+      border: 1px solid color-mix(in oklab, var(--pri) 20%, transparent);
+      border-radius: var(--radius);
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .stat-info {
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--pri);
+      line-height: 1;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    
+    .chart-container {
+      background: color-mix(in oklab, var(--card) 50%, var(--bg));
+      border-radius: var(--radius);
+      padding: 16px;
+      margin: 16px 0;
+    }
+    
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .chart-header h3 {
+      margin: 0;
+      color: var(--text);
+      font-size: 16px;
+    }
+    
+    .chart-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--chip);
+      border-radius: var(--radius);
+      padding: 4px;
+    }
+    
+    .toggle-btn {
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      border-radius: calc(var(--radius) - 4px);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .toggle-btn.active {
+      background: var(--pri);
+      color: white;
+      font-weight: 600;
+    }
+    
+    .toggle-btn:not(.active):hover {
+      background: color-mix(in oklab, var(--text) 10%, transparent);
+    }
+    
+    .stats-tabs {
+      display: flex;
+      gap: 4px;
+      margin: 16px 0;
+      background: var(--chip);
+      border-radius: var(--radius);
+      padding: 4px;
+    }
+    
+    .stats-tab {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      border-radius: calc(var(--radius) - 4px);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .stats-tab.active {
+      background: var(--pri);
+      color: white;
+      font-weight: 600;
+    }
+    
+    .stats-tab:not(.active):hover {
+      background: color-mix(in oklab, var(--text) 10%, transparent);
+    }
+    
+    .stats-content {
+      position: relative;
+    }
+    
+    .stats-period {
+      display: none;
+    }
+    
+    .stats-period.active {
+      display: block;
+    }
+    
+    .stats-period h4 {
+      margin: 16px 0 12px 0;
+      color: var(--text);
+      font-size: 16px;
+    }
+    
+    .stats-summary {
+      background: color-mix(in oklab, var(--muted) 10%, transparent);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-top: 12px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    
+    @media (max-width: 480px) {
+      .quick-stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      
+      .stat-card {
+        padding: 10px;
+      }
+      
+      .stat-value {
+        font-size: 18px;
+      }
+      
+      .chart-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .chart-header h3 {
+        text-align: center;
+        margin-bottom: 8px;
+      }
+      
+      .chart-toggle {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Alcool Tracker</h1>
+    <nav class="tabs" role="tablist" aria-label="Sezioni">
+      <button id="tab-track" class="tab active" data-target="view-track">Tracker</button>
+      <button id="tab-stats" class="tab" data-target="view-stats">Statistiche</button>
+      <button id="tab-settings" class="tab" data-target="view-settings" title="Impostazioni">⚙️</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- TRACK VIEW -->
+    <section id="view-track" class="view active" aria-labelledby="tab-track">
+      <div class="card">
+        <div class="date-row">
+          <button id="prev-day" class="ghost" aria-label="Giorno precedente">&larr;</button>
+          <div id="current-date" class="date-label"></div>
+          <button id="next-day" class="ghost" aria-label="Giorno successivo">&rarr;</button>
+        </div>
+
+        <div id="daily-recap" class="section-title">Aggiungi drink</div>
+
+        <!-- Birra -->
+        <div class="group">
+          <div class="group-title">Birra</div>
+          <div class="seg-row">
+            <div class="seg">
+              <input type="radio" id="beer-33" name="beer-size" value="33" checked>
+              <label for="beer-33">33 cl</label>
+            </div>
+            <div class="seg">
+              <input type="radio" id="beer-50" name="beer-size" value="50">
+              <label for="beer-50">50 cl</label>
+            </div>
+          </div>
+          <div class="seg-row">
+            <div class="seg">
+              <input type="radio" id="beer-bionda" name="beer-type" value="Bionda" checked>
+              <label for="beer-bionda">Bionda</label>
+            </div>
+            <div class="seg">
+              <input type="radio" id="beer-ipa" name="beer-type" value="IPA">
+              <label for="beer-ipa">IPA</label>
+            </div>
+          </div>
+          <button class="primary wide" id="add-beer">Aggiungi birra</button>
+        </div>
+
+        <!-- Vini -->
+        <div class="group">
+          <div class="group-title">Vino (0,2 L)</div>
+          <div class="grid-2">
+            <button class="chip" data-quick="vino-rosso">Vino Rosso</button>
+            <button class="chip" data-quick="vino-classico">Metodo Classico</button>
+            <button class="chip" data-quick="vino-bianco">Bianco Fermo</button>
+          </div>
+        </div>
+
+        <!-- Cocktail -->
+        <div class="group">
+          <div class="group-title">Cocktail</div>
+          <div class="grid-2">
+            <button class="chip" data-quick="gin-tonic">Gin Tonic</button>
+            <button class="chip" data-quick="americano">Americano</button>
+            <button class="chip" data-quick="negroni">Negroni</button>
+            <button class="chip" data-quick="spritz-aperol">Spritz Aperol</button>
+            <button class="chip" data-quick="spritz-campari">Spritz Campari</button>
+            <button class="chip" data-quick="cocchino">Cocchino</button>
+          </div>
+        </div>
+
+        <!-- Personalizzato -->
+        <div class="group">
+          <div class="group-title">Aggiungi personalizzato</div>
+          <form id="custom-form" class="form-row">
+            <input id="custom-name" type="text" inputmode="text" autocomplete="off" placeholder="Nome (es. Spritz)" required>
+            <input id="custom-qty" type="number" inputmode="decimal" step="1" min="1" placeholder="Quantità (cl)" required>
+            <input id="custom-kcal" type="number" inputmode="decimal" step="1" min="0" placeholder="Calorie (kcal)" required>
+            <input id="custom-abv" type="number" inputmode="decimal" step="0.1" min="0" max="100" placeholder="ABV % (opz.)">
+            <button class="primary" type="submit">+ Aggiungi</button>
+          </form>
+          <small class="hint">Le calorie sono <b>totali</b> per la quantità indicata. Se inserisci l’ABV (%), calcolo grammi di alcol e unità.</small>
+        </div>
+
+        <!-- LOG GIORNALIERO -->
+        <div class="group">
+          <div class="group-title">Oggi</div>
+          <ul id="log-list" class="log-list" aria-live="polite"></ul>
+          <div class="totals">
+            <div><strong>Totale quantità:</strong> <span id="total-qty">0</span> cl</div>
+            <div><strong>Totale calorie:</strong> <span id="total-kcal">0</span> kcal</div>
+            <div><strong>Alcol puro:</strong> <span id="total-grams">0.0</span> g • <span id="total-units">0.0</span> unità</div>
+          </div>
+          <div class="row-end">
+            <button id="undo-last" class="ghost">Annulla ultima</button>
+            <button id="clear-day" class="danger ghost">Svuota giorno</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS VIEW -->
+    <section id="view-stats" class="view" aria-labelledby="tab-stats" hidden>
+      <div class="card">
+        <h2 class="section-title">📊 Statistiche</h2>
+
+        <!-- Quick Stats Cards -->
+        <div class="summary-grid">  <div class="summary-card">    <h3 class="summary-title">Oggi</h3>    <div class="summary-rows">      <div class="summary-box"><div id="sum-today-drinks" class="summary-big">0</div><div class="summary-label">Drinks</div></div>      <div class="summary-box"><div id="sum-today-kcal" class="summary-big">0</div><div class="summary-label">Calorie</div></div>    </div>  </div>  <div class="summary-card">    <h3 class="summary-title">Questa Settimana</h3>    <div class="summary-rows">      <div class="summary-box"><div id="sum-week-drinks" class="summary-big">0</div><div class="summary-label">Drinks</div></div>      <div class="summary-box"><div id="sum-week-kcal" class="summary-big">0</div><div class="summary-label">Calorie</div></div>    </div>  </div></div>
+<!-- Weekly Chart -->
+        <div class="stats-block chart-container">
+          <div class="chart-header">
+            <h3 id="chart-title">📊 Alcol consumato questa settimana (grammi EtOH)</h3>
+            <div class="chart-toggle">
+              <button class="toggle-btn active" data-metric="alcohol">Alcol (g)</button>
+              <button class="toggle-btn" data-metric="calories">Calorie (kcal)</button>
+            </div>
+          </div>
+          <canvas id="chart-7" width="600" height="240" aria-label="Grafico settimana corrente"></canvas>
+        </div>
+
+        <!-- Detailed Stats -->
+        <div class="stats-tabs">
+          <button class="stats-tab active" data-period="week">Settimana</button>
+          <button class="stats-tab" data-period="month">Mese</button>
+          <button class="stats-tab" data-period="weekend">Weekend</button>
+        </div>
+
+        <div class="stats-content">
+          <div id="stats-week" class="stats-period active">
+            <h4>🗓️ Settimana corrente</h4>
+            <div id="stats-7" class="stats"></div>
+            <div class="stats-summary" id="totals-7"></div>
+          </div>
+          
+          <div id="stats-month" class="stats-period">
+            <h4>📅 Ultime 4 settimane</h4>
+            <div id="stats-28" class="stats"></div>
+            <div class="stats-summary" id="totals-28"></div>
+          </div>
+          
+          <div id="stats-weekend" class="stats-period">
+            <h4>🎉 Ultimi 4 weekend</h4>
+            <div id="weekend-4" class="stats"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS VIEW -->
+    <section id="view-settings" class="view" aria-labelledby="tab-settings" hidden>
+      <div class="card">
+        <h2 class="section-title">Impostazioni</h2>
+        <p>Calorie predefinite per voci rapide (modificabili):</p>
+        <div id="preset-editor" class="preset-editor"></div>
+        <div class="row-end">
+          <button id="reset-presets" class="ghost danger">Ripristina predefiniti</button>
+        </div>
+
+        <h3>Esporta / Importa</h3>
+        <div class="grid-2">
+          <button id="export-data" class="chip">Esporta JSON</button>
+          <label class="file-btn chip">
+            Importa JSON
+            <input id="import-file" type="file" accept="application/json" hidden>
+          </label>
+        </div>
+        <p class="hint" style="margin-top:12px">Nota: le voci personalizzate calcolano grammi/unità solo se inserisci l’ABV.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <small>Dato locale su questo dispositivo • PWA offline</small>
+  </footer>
+
+  <script>
+    // ====== Helpers ======
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const toLocalISO=(d=new Date())=>{const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),da=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${da}`;};
+const fromISOToLocalDate=(iso)=>{const [y,m,da]=iso.split('-').map(Number);return new Date(y,m-1,da);};
+const todayISO=(d=new Date())=>toLocalISO(d);
+    const fmtDateLong = iso => new Date(iso+"T12:00:00").toLocaleDateString('it-IT', {weekday:'short', day:'2-digit', month:'short'});
+
+    // Storage keys
+    const DB_KEY = 'alcohol-tracker:v4:entries'; // v4: weekend details
+    const PRESETS_KEY = 'alcohol-tracker:v4:presets';
+
+    // ====== Default presets ======
+    const DEFAULT_PRESETS = {
+      beer: {
+        bionda: {33: 145, 50: 220},
+        IPA:    {33: 170, 50: 260},
+        abv: { bionda: 0.05, IPA: 0.065 }
+      },
+      wine: {
+        rosso_0_2L: 170,
+        classico_0_2L: 150,
+        bianco_0_2L: 160,
+        abv: { rosso_0_2L: 0.135, classico_0_2L: 0.12, bianco_0_2L: 0.12 }
+      },
+      cocktail: {
+        "Gin Tonic": 180,
+        "Americano": 16.1,
+        "Negroni": 195,
+        "Spritz Aperol": 15.6,
+        "Spritz Campari": 153,
+        "Cocchino": 100,
+        grams: { "Gin Tonic": 15.8, "Americano": 175.5, "Negroni": 18.9, "Spritz Aperol": 190.3, "Spritz Campari": 153.0, "Cocchino": 6.3 }
+      }
+    };
+
+    // ====== State ======
+    let entries = loadEntries();
+    let presets = loadPresets();
+    const state = { currentDate: todayISO() };
+
+    document.addEventListener('DOMContentLoaded', init);
+
+    // ====== iOS Optimizations ======
+    function initIOSOptimizations(){
+      // Prevent viewport zoom on input focus
+      const inputs = $$('input');
+      inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+          // Scroll input into view on iOS
+          setTimeout(() => {
+            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 300);
+        });
+      });
+
+      // Handle virtual keyboard on iOS
+      if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        let initialViewportHeight = window.innerHeight;
+        
+        window.addEventListener('resize', () => {
+          const currentHeight = window.innerHeight;
+          const heightDiff = initialViewportHeight - currentHeight;
+          
+          // Keyboard is likely open if height decreased significantly
+          if (heightDiff > 150) {
+            document.body.classList.add('keyboard-open');
+          } else {
+            document.body.classList.remove('keyboard-open');
+          }
+        });
+      }
+
+      // Improve touch scrolling
+      document.addEventListener('touchstart', () => {}, { passive: true });
+      document.addEventListener('touchmove', () => {}, { passive: true });
+    }
+
+    function init(){
+      bindTabs();
+      updateDateLabel();
+      bindDayNav();
+      bindQuickButtons();
+      bindBeerAdd();
+      bindCustomForm();
+      renderDay();
+      renderPresetsEditor();
+      bindExportImport();
+      renderStats();
+      drawWeeklyChart();
+      renderWeekend4();
+
+      // iPhone optimizations
+      initIOSOptimizations();
+
+      // Dynamic manifest (1-file PWA)
+      createDynamicManifest();
+
+      // Register service worker from Blob URL
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          const CACHE = 'alcool-tracker-v1';
+          const ASSETS = ['./'];
+          self.addEventListener('install', e=>{
+            e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
+            self.skipWaiting();
+          });
+          self.addEventListener('activate', e=>{
+            e.waitUntil(
+              caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
+            );
+            self.clients.claim();
+          });
+          self.addEventListener('fetch', e=>{
+            const req = e.request;
+            if (req.mode === 'navigate'){
+              e.respondWith(fetch(req).catch(()=>caches.match('./')));
+            } else {
+              e.respondWith(caches.match(req).then(res=>res || fetch(req)));
+            }
+          });
+        `;
+        const blob = new Blob([swCode], {type:'text/javascript'});
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(()=>{});
+      }
+    }
+
+    // ====== Storage ======
+    function loadEntries(){
+      try {
+        return JSON.parse(localStorage.getItem(DB_KEY)) || [];
+      } catch { return []; }
+    }
+    function saveEntries(){ localStorage.setItem(DB_KEY, JSON.stringify(entries)); }
+    function loadPresets(){
+      try {
+        return JSON.parse(localStorage.getItem(PRESETS_KEY)) || DEFAULT_PRESETS;
+      } catch { return DEFAULT_PRESETS; }
+    }
+    function savePresets(){ localStorage.setItem(PRESETS_KEY, JSON.stringify(presets)); }
+
+    // ====== Tabs ======
+    function bindTabs(){
+      $$('.tab').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          $$('.tab').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          const target = btn.dataset.target;
+          $$('.view').forEach(v=>{
+            const on = v.id===target;
+            v.classList.toggle('active', on);
+            v.hidden = !on;
+          });
+          if (target==='view-stats') { renderStats(); drawWeeklyChart(); renderWeekend4(); }
+          if (target==='view-settings') renderPresetsEditor();
+        });
+      });
+    }
+
+    // ====== Date nav ======
+    function updateDateLabel(){ $('#current-date').textContent = fmtDateLong(state.currentDate); }
+    function bindDayNav(){
+      $('#prev-day').addEventListener('click', ()=>{
+        const d = new Date(state.currentDate);
+        d.setDate(d.getDate()-1);
+        state.currentDate = todayISO(d);
+        updateDateLabel(); renderDay();
+      });
+      $('#next-day').addEventListener('click', ()=>{
+        const d = new Date(state.currentDate);
+        d.setDate(d.getDate()+1);
+        state.currentDate = todayISO(d);
+        updateDateLabel(); renderDay();
+      });
+    }
+
+    // ====== Alcohol math ======
+    const ETHANOL_DENSITY = 0.789; // g/ml
+    const UK_UNIT_G = 8; // 1 unità = 8 g
+
+    function gramsFromMlABV(ml, abv){ return ml * abv * ETHANOL_DENSITY; } // g
+    function unitsFromGrams(g){ return g / UK_UNIT_G; }
+
+    // ====== Add entries ======
+    function addEntry(obj){
+      const entry = { id: crypto.randomUUID(), date: state.currentDate, ...obj };
+      if (typeof entry.grams === 'number') entry.units = + (entry.grams / UK_UNIT_G).toFixed(2);
+      entries.push(entry);
+      saveEntries();
+      renderDay();
+    }
+
+    function bindBeerAdd(){
+      $('#add-beer').addEventListener('click', ()=>{
+        const sizeCl = Number(document.querySelector('input[name="beer-size"]:checked').value);
+        const type = document.querySelector('input[name="beer-type"]:checked').value; // "Bionda" or "IPA"
+        const kcal = presets.beer[type.toLowerCase()][sizeCl];
+        const abv = presets.beer.abv[type.toLowerCase()];
+        const grams = gramsFromMlABV(sizeCl*10, abv);
+        addEntry({
+          category: 'Birra',
+          name: `Birra ${type}`,
+          qtyCl: sizeCl,
+          kcal,
+          grams: +grams.toFixed(1)
+        });
+      });
+    }
+
+    
+function bindQuickButtons(){
+  $$('.chip[data-quick]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const key = btn.dataset.quick;
+      if (key==='vino-rosso'){
+        const abv = presets.wine.abv.rosso_0_2L;
+        addEntry({category:'Vino', name:'Vino Rosso (0,2 L)', qtyCl: 20, kcal: presets.wine.rosso_0_2L, grams: +gramsFromMlABV(200,abv).toFixed(0)});
+      } else if (key==='vino-classico'){
+        const abv = presets.wine.abv.classico_0_2L;
+        addEntry({category:'Vino', name:'Metodo Classico (0,2 L)', qtyCl: 20, kcal: presets.wine.classico_0_2L, grams: +gramsFromMlABV(200,abv).toFixed(0)});
+      } else if (key==='vino-bianco'){
+        const abv = presets.wine.abv.bianco_0_2L;
+        addEntry({category:'Vino', name:'Bianco Fermo (0,2 L)', qtyCl: 20, kcal: presets.wine.bianco_0_2L, grams: +gramsFromMlABV(200,abv).toFixed(0)});
+      } else if (key==='gin-tonic'){
+        const grams = presets.cocktail.grams['Gin Tonic'];
+        addEntry({category:'Cocktail', name:'Gin Tonic', qtyCl: 30, kcal: presets.cocktail['Gin Tonic'], grams});
+      } else if (key==='americano'){
+        const grams = presets.cocktail.grams['Americano'];
+        addEntry({category:'Cocktail', name:'Americano', qtyCl: 20, kcal: presets.cocktail['Americano'], grams});
+      } else if (key==='negroni'){
+        const grams = presets.cocktail.grams['Negroni'];
+        addEntry({category:'Cocktail', name:'Negroni', qtyCl: 27, kcal: presets.cocktail['Negroni'], grams});
+      } else if (key==='spritz-aperol'){
+        const grams = presets.cocktail.grams['Spritz Aperol'];
+        addEntry({category:'Cocktail', name:'Spritz Aperol', qtyCl: 21, kcal: presets.cocktail['Spritz Aperol'], grams});
+      } else if (key==='spritz-campari'){
+        const grams = presets.cocktail.grams['Spritz Campari'];
+        addEntry({category:'Cocktail', name:'Spritz Campari', qtyCl: 18, kcal: presets.cocktail['Spritz Campari'], grams});
+      } else if (key==='cocchino'){
+        const grams = presets.cocktail.grams['Cocchino'];
+        addEntry({category:'Cocktail', name:'Cocchino', qtyCl: 15, kcal: presets.cocktail['Cocchino'], grams});
+      }
+    });
+  });
+}
+
+        });
+      });
+    }
+
+    function bindCustomForm(){
+      const form = $('#custom-form');
+      form.addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const name = $('#custom-name').value.trim();
+        const qty = Number($('#custom-qty').value);
+        const kcal = Number($('#custom-kcal').value);
+        const abvPct = $('#custom-abv').value.trim();
+        if(!name || qty<=0 || kcal<0) return;
+
+        const entry = {category:'Personalizzato', name, qtyCl: qty, kcal};
+        if (abvPct !== ''){
+          const abv = Math.max(0, Math.min(100, Number(abvPct))) / 100; // clamp 0-100 -> 0-1
+          const grams = gramsFromMlABV(qty*10, abv);
+          entry.grams = +grams.toFixed(1);
+          entry.units = +(entry.grams/UK_UNIT_G).toFixed(2);
+        }
+        addEntry(entry);
+        form.reset();
+      });
+    }
+
+    // ====== Update daily recap ======
+    function updateDailyRecap(){
+      const list = entries.filter(e => e.date===state.currentDate);
+      if (list.length === 0) {
+        $('#daily-recap').textContent = 'Aggiungi drink';
+        return;
+      }
+      
+      // Count by category
+      const counts = {};
+      list.forEach(e => {
+        const category = e.category || 'Altro';
+        counts[category] = (counts[category] || 0) + 1;
+      });
+      
+      // Create recap text
+      const parts = [];
+      if (counts.Birra) parts.push(`${counts.Birra} birr${counts.Birra === 1 ? 'a' : 'e'}`);
+      if (counts.Vino) parts.push(`${counts.Vino} vin${counts.Vino === 1 ? 'o' : 'i'}`);
+      if (counts.Cocktail) parts.push(`${counts.Cocktail} cocktail`);
+      if (counts.Personalizzato) parts.push(`${counts.Personalizzato} personalizzat${counts.Personalizzato === 1 ? 'o' : 'i'}`);
+      
+      const recapText = parts.length > 0 ? `Oggi: ${parts.join(', ')}` : 'Aggiungi drink';
+      $('#daily-recap').textContent = recapText;
+    }
+
+    // ====== Render day ======
+    function renderDay(){
+      // Update dynamic recap
+      updateDailyRecap();
+      
+      const ul = $('#log-list');
+      ul.innerHTML = '';
+      const list = entries.filter(e => e.date===state.currentDate);
+      let totCl = 0, totKcal = 0, totGrams = 0;
+      list.forEach(e=>{
+        totCl += e.qtyCl || 0;
+        totKcal += e.kcal || 0;
+        totGrams += e.grams || 0;
+        const li = document.createElement('li');
+        li.className = 'log-item';
+        const extra = (e.grams!=null) ? ` • ${e.grams} g EtOH • ${(e.units ?? (e.grams/8)).toFixed(2)} unità` : '';
+        li.innerHTML = `
+          <div>
+            <div><strong>${e.name}</strong></div>
+            <div class="item-meta">${e.category} • ${e.qtyCl ?? 0} cl • ${e.kcal ?? 0} kcal${extra}</div>
+          </div>
+          <button class="ghost danger" data-del="${e.id}" aria-label="Elimina">✕</button>
+        `;
+        ul.appendChild(li);
+      });
+      $('#total-qty').textContent = Math.round(totCl);
+      $('#total-kcal').textContent = Math.round(totKcal);
+      $('#total-grams').textContent = (Math.round(totGrams*10)/10).toFixed(1);
+      $('#total-units').textContent = (totGrams/8).toFixed(2);
+
+      ul.querySelectorAll('button[data-del]').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          entries = entries.filter(x=>x.id !== btn.dataset.del);
+          saveEntries(); renderDay(); renderStats(); drawWeeklyChart(); renderWeekend4();
+        });
+      });
+
+      $('#undo-last').onclick = ()=>{
+        const idx = entries.findLastIndex(e=>e.date===state.currentDate);
+        if (idx>-1){ entries.splice(idx,1); saveEntries(); renderDay(); renderStats(); drawWeeklyChart(); renderWeekend4(); }
+      };
+      $('#clear-day').onclick = ()=>{
+        if (confirm('Svuotare tutte le voci del giorno?')){
+          entries = entries.filter(e=>e.date!==state.currentDate);
+          saveEntries(); renderDay(); renderStats(); drawWeeklyChart(); renderWeekend4();
+        }
+      };
+    }
+
+    // ====== Stats ======
+    function groupBy(arr, fn){ return arr.reduce((acc,x)=>{ const k = fn(x); (acc[k] ||= []).push(x); return acc; }, {}); }
+
+    // Calendar week helpers
+    function getMonday(d=new Date()){
+      const x = new Date(d);
+      x.setHours(0,0,0,0);
+      const day = (x.getDay()+6)%7; // 0=Mon ... 6=Sun
+      x.setDate(x.getDate()-day);
+      return x;
+    }
+    function isoOf(d){ return toLocalISO(d); }
+    function inRange(iso, startDate, endDate){ const d = fromISOToLocalDate(iso);
+      const start = new Date(startDate); start.setHours(0,0,0,0);
+      const end = new Date(endDate); end.setHours(23,59,59,999);
+      return d>=start && d<=end;
+    }
+    function computeStatsRange(startDate, endDate){
+      const subset = entries.filter(e=>inRange(e.date, startDate, endDate));
+      const byName = groupBy(subset, e=>e.name);
+      const rows = Object.entries(byName).map(([name,list])=>{
+        const qty = list.reduce((s,x)=>s+(x.qtyCl||0),0);
+        const kcal = list.reduce((s,x)=>s+(x.kcal||0),0);
+        const grams = list.reduce((s,x)=>s+(x.grams||0),0);
+        return {name, qty, kcal, grams, units: grams/8};
+      }).sort((a,b)=>b.kcal-a.kcal);
+      const totals = rows.reduce((acc,r)=>({qty:acc.qty+r.qty, kcal:acc.kcal+r.kcal, grams:acc.grams+r.grams}), {qty:0,kcal:0,grams:0});
+      totals.units = totals.grams/8;
+      return {rows, totals};
+    }
+    function computeStatsCurrentWeek(){
+      const mon = getMonday(new Date());
+      const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+      return computeStatsRange(mon, sun);
+    }
+    function computeStatsLast4Weeks(){
+      const mon = getMonday(new Date());
+      const start = new Date(mon); start.setDate(mon.getDate()-21); // 3 weeks before current Monday
+      const sun = new Date(mon); sun.setDate(mon.getDate()+6); // end of current week
+      return computeStatsRange(start, sun);
+    }
+
+    function renderStats(){
+      // Update quick stats
+      updateQuickStats();
+      
+      const s7 = computeStatsCurrentWeek();
+      const s28 = computeStatsLast4Weeks();
+      const mount = (elId, totalsId, stats)=>{
+        const container = document.getElementById(elId);
+        if (!container) return;
+        container.innerHTML = '';
+        if (stats.rows.length===0){ 
+          container.innerHTML = `<div class="hint">Nessun dato nel periodo.</div>`; 
+          if (totalsId) document.getElementById(totalsId).textContent=''; 
+          return; 
+        }
+        const totalKcal = stats.rows.reduce((s,r)=>s+r.kcal,0);
+        stats.rows.forEach(r=>{
+          const row = document.createElement('div');
+          row.className = 'stat-row';
+          const pct = totalKcal ? Math.max(3, Math.round((r.kcal/totalKcal)*100)) : 0;
+          row.innerHTML = `
+            <div class="stat-name">${r.name}</div>
+            <div class="bar"><span style="width:${pct}%"></span></div>
+            <div class="stat-vals">${Math.round(r.qty)} cl • ${Math.round(r.kcal)} kcal • ${r.grams.toFixed(1)} g • ${r.units.toFixed(2)} unità</div>
+          `;
+          container.appendChild(row);
+        });
+        if (totalsId) {
+          document.getElementById(totalsId).textContent =
+            `Totali: ${Math.round(stats.totals.qty)} cl • ${Math.round(stats.totals.kcal)} kcal • ${stats.totals.grams.toFixed(1)} g • ${stats.totals.units.toFixed(2)} unità`;
+        }
+      };
+      mount('stats-7','totals-7',s7);
+      mount('stats-28','totals-28',s28);
+      
+      // Initialize stats tabs if not already done
+      initStatsTabs();
+    }
+    
+    function renderSummaries(){
+ const today = toLocalISO(new Date());
+ const todayList = entries.filter(e=>e.date===today);
+ const todayKcal = todayList.reduce((s,x)=>s+(x.kcal||0),0);
+ document.getElementById('sum-today-drinks').textContent = todayList.length;
+ document.getElementById('sum-today-kcal').textContent = Math.round(todayKcal);
+ const mon=getMonday(new Date()); const sun=new Date(mon); sun.setDate(mon.getDate()+6);
+ const listWeek = entries.filter(e=>inRange(e.date, mon, sun));
+ const kcalWeek = listWeek.reduce((s,x)=>s+(x.kcal||0),0);
+ document.getElementById('sum-week-drinks').textContent = listWeek.length;
+ document.getElementById('sum-week-kcal').textContent = Math.round(kcalWeek);
+}
+
+function initStatsTabs(){
+      // Only initialize once
+      if (document.querySelector('.stats-tab[data-initialized]')) return;
+      
+      $$('.stats-tab').forEach(tab => {
+        tab.setAttribute('data-initialized', 'true');
+        tab.addEventListener('click', () => {
+          // Remove active from all tabs and periods
+          $$('.stats-tab').forEach(t => t.classList.remove('active'));
+          $$('.stats-period').forEach(p => p.classList.remove('active'));
+          
+          // Add active to clicked tab
+          tab.classList.add('active');
+          
+          // Show corresponding period
+          const period = tab.dataset.period;
+          const periodEl = document.getElementById(`stats-${period}`);
+          if (periodEl) periodEl.classList.add('active');
+        });
+      });
+    }
+
+    // ====== Enhanced chart system ======
+    let currentChartPeriod = 'week';
+    let currentChartMetric = 'alcohol';
+    
+    function drawWeeklyChart(){
+      initChartControls();
+      drawChart();
+    }
+    
+    function initChartControls(){
+      // Initialize toggle buttons
+      $$('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          $$('.toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentChartMetric = btn.dataset.metric;
+          drawChart();
+        });
+      });
+      
+      // Update stats tabs to control chart
+      $$('.stats-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const period = tab.dataset.period;
+          if (period === 'week' || period === 'month' || period === 'weekend') {
+            currentChartPeriod = period;
+            drawChart();
+          }
+        });
+      });
+    }
+    
+    function drawChart(){
+      const canvas = document.getElementById('chart-7');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0,0,W,H);
+      
+      let data = [];
+      let title = '';
+      
+      if (currentChartPeriod === 'week') {
+        data = getWeekData();
+        title = currentChartMetric === 'alcohol' ? '📊 Alcol questa settimana (grammi EtOH)' : '📊 Calorie questa settimana (kcal)';
+      } else if (currentChartPeriod === 'month') {
+        data = getMonthData();
+        title = currentChartMetric === 'alcohol' ? '📊 Alcol ultime 4 settimane (grammi EtOH)' : '📊 Calorie ultime 4 settimane (kcal)';
+      } else if (currentChartPeriod === 'weekend') {
+        data = getWeekendData();
+        title = currentChartMetric === 'alcohol' ? '📊 Alcol ultimi 4 weekend (grammi EtOH)' : '📊 Calorie ultimi 4 weekend (kcal)';
+      }
+      
+      $('#chart-title').textContent = title;
+      
+      if (data.length === 0) return;
+      
+      const values = data.map(d => currentChartMetric === 'alcohol' ? d.grams : d.calories);
+      const max = Math.max(10, ...values);
+      const pad = 40, barW = (W - pad*2) / (data.length*1.4);
+      const gap = barW*0.4;
+      
+      // Grid and axes
+      const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text').trim()||'#222';
+ctx.strokeStyle=textColor;ctx.fillStyle=textColor;
+      ctx.lineWidth = 1;
+      ctx.font = '12px system-ui';
+      
+      // Y-axis labels
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i=0;i<=4;i++){
+        const y = pad + (H - pad*2) * (i/4);
+        const val = (max*(1 - i/4)).toFixed(0);
+        ctx.globalAlpha = 0.3; 
+        ctx.beginPath(); 
+        ctx.moveTo(pad, y); 
+        ctx.lineTo(W-pad, y); 
+        ctx.stroke();
+        ctx.globalAlpha = 1; 
+        ctx.fillText(val, pad-6, y);
+      }
+      
+      // Bars and labels
+      const scaleY = (val) => pad + (H - pad*2) * (1 - val/max);
+      let x = pad + gap;
+      ctx.textAlign = 'center';
+      
+      const barColor = getComputedStyle(document.documentElement).getPropertyValue('--bar').trim() || '#3b82f6';
+      
+      data.forEach(d => {
+        const value = currentChartMetric === 'alcohol' ? d.grams : d.calories;
+        const y = scaleY(value);
+        const h = (H - pad) - y;
+        
+        // Draw bar
+        ctx.fillStyle = barColor;
+        ctx.fillRect(x, y, barW, h);
+        
+        // X-axis label
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(d.label, x + barW/2, H - 6);
+        
+        // Value on top of bar
+        if (value > 0) {
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(String(Math.round(value)), x + barW/2, y - 4);
+        }
+        
+        x += barW + gap;
+      });
+    }
+    
+    function getWeekData(){
+      const mon = getMonday(new Date());
+      const days = [];
+      for (let i=0;i<7;i++){
+        const d = new Date(mon); d.setDate(mon.getDate()+i);
+        const iso = toLocalISO(d);
+        const dayEntries = entries.filter(e=>e.date===iso);
+        const grams = dayEntries.reduce((s,x)=>s+(x.grams||0),0);
+        const calories = dayEntries.reduce((s,x)=>s+(x.kcal||0),0);
+        days.push({
+          label: d.toLocaleDateString('it-IT', {weekday:'short'}), 
+          grams, 
+          calories,
+          date: iso
+        });
+      }
+      return days;
+    }
+    
+    function getMonthData(){
+      const weeks = [];
+      const currentWeek = getMonday(new Date());
+      
+      for (let i=0;i<4;i++){
+        const weekStart = new Date(currentWeek);
+        weekStart.setDate(currentWeek.getDate() - (i*7));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        const weekEntries = entries.filter(e => inRange(e.date, weekStart, weekEnd));
+        const grams = weekEntries.reduce((s,x)=>s+(x.grams||0),0);
+        const calories = weekEntries.reduce((s,x)=>s+(x.kcal||0),0);
+        
+        weeks.unshift({
+          label: `Sett ${4-i}`,
+          grams,
+          calories
+        });
+      }
+      return weeks;
+    }
+    
+    function getWeekendData(){
+      const weekends = [];
+      const lastFri = getLastFriday(new Date());
+      
+      for (let i=0;i<4;i++){
+        const friStart = new Date(lastFri);
+        friStart.setDate(lastFri.getDate() - (i*7));
+        const sunEnd = new Date(friStart);
+        sunEnd.setDate(friStart.getDate() + 2);
+        
+        const weekendEntries = entries.filter(e => inRange(e.date, friStart, sunEnd));
+        const grams = weekendEntries.reduce((s,x)=>s+(x.grams||0),0);
+        const calories = weekendEntries.reduce((s,x)=>s+(x.kcal||0),0);
+        
+        weekends.unshift({
+          label: `W${4-i}`,
+          grams,
+          calories
+        });
+      }
+      return weekends;
+    }
+    
+    function getLastFriday(d=new Date()){
+      const x = new Date(d);
+      x.setHours(0,0,0,0);
+      const day = x.getDay(); // 0 Sun .. 6 Sat
+      const back = ( (day - 5) + 7 ) % 7; // distance back to Friday (5)
+      x.setDate(x.getDate() - back);
+      return x;
+    }
+
+    // ====== Weekend (Fri–Sun) details (last 4) ======
+    function weekendRanges(count=4){
+      const lastFri = getLastFriday(new Date());
+      const ranges = [];
+      for (let i=0;i<count;i++){
+        const start = new Date(lastFri); start.setDate(lastFri.getDate() - i*7);
+        const end = new Date(start); end.setDate(start.getDate()+2);
+        ranges.push({start, end});
+      }
+      return ranges; // most recent first
+    }
+    function fmtShort(d){ return d.toLocaleDateString('it-IT', {weekday:'short', day:'2-digit', month:'short'}); }
+    function renderWeekend4(){
+      const container = document.getElementById('weekend-4');
+      if (!container) return;
+      container.innerHTML = '';
+      const ranges = weekendRanges(4);
+      ranges.forEach((r, idx)=>{
+        const stats = computeStatsRange(r.start, r.end);
+        const row = document.createElement('div');
+        row.className = 'stat-row';
+        const name = `Wk ${idx+1} ${fmtShort(r.start)} → ${fmtShort(r.end)}`;
+        const totalKcal = Math.max(1, stats.totals.kcal);
+        row.innerHTML = `
+          <div class="stat-name">${name}</div>
+          <div class="bar"><span style="width:100%"></span></div>
+          <div class="stat-vals">${Math.round(stats.totals.qty)} cl • ${Math.round(stats.totals.kcal)} kcal • ${stats.totals.grams.toFixed(1)} g • ${stats.totals.units.toFixed(2)} unità</div>
+        `;
+        container.appendChild(row);
+
+        // Top 3 drink del weekend
+        const top = stats.rows.slice(0,3);
+        top.forEach(t=>{
+          const sub = document.createElement('div');
+          sub.className = 'stat-row';
+          sub.style.opacity = 0.85;
+          const subPct = Math.round((t.kcal/totalKcal)*100);
+          sub.innerHTML = `
+            <div class="stat-name" style="padding-left:10px;">• ${t.name}</div>
+            <div class="bar"><span style="width:${Math.max(3, subPct)}%"></span></div>
+            <div class="stat-vals">${Math.round(t.qty)} cl • ${Math.round(t.kcal)} kcal • ${t.grams.toFixed(1)} g • ${t.units.toFixed(2)} unità</div>
+          `;
+          container.appendChild(sub);
+        });
+      });
+    }
+
+    // ====== Preset editor (edit kcal and ABV) ======
+    function renderPresetsEditor(){
+      const wrap = document.getElementById('preset-editor');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+
+      const row = (label, inputsHTML) => {
+        const div = document.createElement('div');
+        div.className = 'preset-row';
+        div.innerHTML = `<input type="text" value="${label}" disabled>` + inputsHTML;
+        return div;
+      };
+
+      // Birra
+      const beerTitle = document.createElement('div');
+      beerTitle.className = 'group-title'; beerTitle.textContent = 'Birra – kcal per porzione e ABV (%)';
+      wrap.appendChild(beerTitle);
+      ['bionda','IPA'].forEach(type => {
+        [33,50].forEach(size => {
+          const kcalVal = presets.beer[type][size];
+          wrap.appendChild(row(`Birra ${type[0].toUpperCase()+type.slice(1)} ${size}cl`,
+            `<input type="number" step="1" min="0" value="${kcalVal}" data-path="beer.${type}.${size}"><input type="text" value="kcal" disabled>`
+          ));
+        });
+        const abvVal = presets.beer.abv[type];
+        wrap.appendChild(row(`ABV ${type[0].toUpperCase()+type.slice(1)}`,
+          `<input type="number" step="0.1" min="0" max="100" value="${(abvVal*100).toFixed(1)}" data-path="beer.abv.${type}"><input type="text" value="% ABV" disabled>`
+        ));
+      });
+
+      // Vino
+      const wineTitle = document.createElement('div');
+      wineTitle.className = 'group-title'; wineTitle.textContent = 'Vino (0,2 L) – kcal e ABV (%)';
+      wrap.appendChild(wineTitle);
+      [
+        {label:'Rosso 0,2L', path:'wine.rosso_0_2L', abvPath:'wine.abv.rosso_0_2L'},
+        {label:'Metodo Classico 0,2L', path:'wine.classico_0_2L', abvPath:'wine.abv.classico_0_2L'},
+        {label:'Bianco Fermo 0,2L', path:'wine.bianco_0_2L', abvPath:'wine.abv.bianco_0_2L'}
+      ].forEach(w=>{
+        const kcalVal = getPath(presets, w.path);
+        const abvVal = getPath(presets, w.abvPath);
+        wrap.appendChild(row(w.label, `<input type="number" step="1" min="0" value="${kcalVal}" data-path="${w.path}"><input type="text" value="kcal" disabled>`));
+        wrap.appendChild(row(`${w.label} – ABV`, `<input type="number" step="0.1" min="0" max="100" value="${(abvVal*100).toFixed(1)}" data-path="${w.abvPath}"><input type="text" value="% ABV" disabled>`));
+      });
+
+      // Cocktail
+      const cockTitle = document.createElement('div');
+      cockTitle.className = 'group-title'; cockTitle.textContent = 'Cocktail – kcal e grammi di alcol (g EtOH)';
+      wrap.appendChild(cockTitle);
+      const cocktailNames = Object.keys(presets.cocktail).filter(k=>k!=='grams');
+      cocktailNames.forEach(name=>{
+        const kcalVal = presets.cocktail[name];
+        const gramsVal = presets.cocktail.grams[name] ?? 0;
+        wrap.appendChild(row(name,
+          `<input type="number" step="1" min="0" value="${kcalVal}" data-path="cocktail.${name}">
+           <input type="number" step="1" min="0" value="${gramsVal}" data-path="cocktail.grams.${name}">
+           <input type="text" value="kcal | g" disabled>`
+        ));
+      });
+
+      // Bind changes
+      wrap.querySelectorAll('input[type="number"][data-path]').forEach(inp=>{
+        inp.addEventListener('change', ()=>{
+          const path = inp.dataset.path;
+          let val = Number(inp.value);
+          if (path.includes('.abv.')) val = Math.max(0, Math.min(100, val)) / 100;
+          setPath(presets, path, val);
+          savePresets();
+        });
+      });
+    } 33cl" disabled>
+          <input type="number" step="1" min="0" value="${presets.beer[type.toLowerCase()][33]}" data-path="beer.${type.toLowerCase()}.33">
+          <input type="text" value="kcal" disabled>
+        `;
+        wrap.appendChild(row33);
+
+        const row50 = document.createElement('div'); row50.className='preset-row';
+        row50.innerHTML = `
+          <input type="text" value="Birra ${type} 50cl" disabled>
+          <input type="number" step="1" min="0" value="${presets.beer[type.toLowerCase()][50]}" data-path="beer.${type.toLowerCase()}.50">
+          <input type="text" value="kcal" disabled>
+        `;
+        wrap.appendChild(row50);
+
+        // ABV row
+        const abvRow = document.createElement('div'); abvRow.className='preset-row';
+        abvRow.innerHTML = `
+          <input type="text" value="ABV ${type}" disabled>
+          <input type="number" step="0.1" min="0" max="20" value="${(presets.beer.abv[type.toLowerCase()] * 100).toFixed(1)}" data-path="beer.abv.${type.toLowerCase()}" data-is-percentage="true">
+          <input type="text" value="%" disabled>
+        `;
+        wrap.appendChild(abvRow);
+      });
+
+      const wineTitle = document.createElement('div');
+      wineTitle.className = 'group-title'; wineTitle.textContent = '🍷 Vino (bicchiere 0,2 L) – kcal e ABV';
+      wrap.appendChild(wineTitle);
+
+      const wineRows = [
+        {label:'Rosso 0,2L', path:'wine.rosso_0_2L', abvPath:'wine.abv.rosso_0_2L'},
+        {label:'Metodo Classico 0,2L', path:'wine.classico_0_2L', abvPath:'wine.abv.classico_0_2L'},
+        {label:'Bianco Fermo 0,2L', path:'wine.bianco_0_2L', abvPath:'wine.abv.bianco_0_2L'}
+      ];
+      wineRows.forEach(w=>{
+        // Calories row
+        const row = document.createElement('div'); row.className='preset-row';
+        row.innerHTML = `
+          <input type="text" value="${w.label}" disabled>
+          <input type="number" step="1" min="0" value="${getPath(presets, w.path)}" data-path="${w.path}">
+          <input type="text" value="kcal" disabled>
+        `;
+        wrap.appendChild(row);
+
+        // ABV row
+        const abvRow = document.createElement('div'); abvRow.className='preset-row';
+        abvRow.innerHTML = `
+          <input type="text" value="ABV ${w.label.replace(' 0,2L', '')}" disabled>
+          <input type="number" step="0.1" min="0" max="20" value="${(getPath(presets, w.abvPath) * 100).toFixed(1)}" data-path="${w.abvPath}" data-is-percentage="true">
+          <input type="text" value="%" disabled>
+        `;
+        wrap.appendChild(abvRow);
+      });
+
+      const cockTitle = document.createElement('div');
+      cockTitle.className = 'group-title'; cockTitle.textContent = '🍸 Cocktail – kcal per drink';
+      wrap.appendChild(cockTitle);
+
+      ['Gin Tonic','Americano','Negroni','Spritz Aperol','Spritz Campari','Cocchino'].forEach(name=>{
+        const path = `cocktail.${name}`;
+        const row = document.createElement('div'); row.className='preset-row';
+        row.innerHTML = `
+          <input type="text" value="${name}" disabled>
+          <input type="number" step="1" min="0" value="${getPath(presets, path)}" data-path="${path}">
+          <input type="text" value="kcal" disabled>
+        `;
+        wrap.appendChild(row);
+      });
+
+      // Bind change
+      wrap.querySelectorAll('input[type="number"][data-path]').forEach(inp=>{
+        inp.addEventListener('change', ()=>{
+          const path = inp.dataset.path;
+          let value = Number(inp.value);
+          
+          // Convert percentage to decimal for ABV values
+          if (inp.dataset.isPercentage === 'true') {
+            value = value / 100;
+          }
+          
+          setPath(presets, path, value);
+          savePresets();
+        });
+      });
+
+      $('#reset-presets').onclick = ()=>{
+        if (confirm('Ripristinare i valori predefiniti?')){
+          presets = JSON.parse(JSON.stringify(DEFAULT_PRESETS));
+          savePresets();
+          renderPresetsEditor();
+        }
+      };
+    }
+
+    function getPath(obj, path){ return path.split('.').reduce((acc,k)=>acc?.[k], obj); }
+    function setPath(obj, path, value){
+      const keys = path.split('.'); let cur = obj;
+      keys.slice(0,-1).forEach(k=>{ cur[k] = cur[k] ?? {}; cur = cur[k]; });
+      cur[keys.at(-1)] = value;
+    }
+
+    // ====== Export / Import ======
+    function bindExportImport(){
+      $('#export-data').onclick = ()=>{
+        const data = { entries, presets };
+        const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `alcool-tracker-${todayISO()}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      };
+      $('#import-file').addEventListener('change', (e)=>{
+        const file = e.target.files?.[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ()=>{
+          try{
+            const data = JSON.parse(reader.result);
+            if (Array.isArray(data.entries)) entries = data.entries;
+            if (data.presets) presets = data.presets;
+            saveEntries(); savePresets();
+            renderDay(); renderStats(); drawWeeklyChart(); renderPresetsEditor(); renderWeekend4();
+            alert('Dati importati.');
+          } catch(err){ alert('File non valido.'); }
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    // ====== Dynamic manifest (single-file) ======
+    function createDynamicManifest(){
+      const manifest = {
+        name: "Alcool Tracker",
+        short_name: "Alcool",
+        start_url: ".",
+        scope: ".",
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#0f172a",
+        icons: [
+          { src: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAABzq4c7AAAACXBIWXMAAAsSAAALEgHS3X78AAABYUlEQVR4nO3RMQEAIAzAMOQ/6b0mY8Uo5Nw1w0Q0w2d8FQAAAAAAAAAAAAAAAAAAAB6m0cWQY7s1r4sZfVn8L3g9rEo8m2wq9d0z8bB2yqf0yZx3gJg8Fq7Jg7wqg7z3w8m0Zr7b2iGxv0X8eYF6k7l0g8f9w2m0Vb7b0jGxv0X8eYF6k7l0g8f9w2m0Vb7b0jGyv5v0f/5wAAAAAAAAAAAAAAAAAAAAAAAPw9B2h1b+1yqgAAAABJRU5ErkJggg==", sizes: "180x180", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], {type:'application/manifest+json'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = url;
+      document.head.appendChild(link);
+    }
+  </script>
+</body>
+</html>
